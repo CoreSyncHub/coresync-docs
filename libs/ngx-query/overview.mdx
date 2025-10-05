@@ -1,0 +1,44 @@
+---
+sidebar_position: 0
+sidebar_label: Overview
+description: 'NGX Query is a data-fetching library for Angular applications, inspired by TanStack Query. It provides a minimal and flexible API for managing server state, caching, and synchronizing data with your UI.'
+toc_max_heading_level: 5
+---
+
+# Overview
+
+NGX Query is a data-fetching library for Angular applications, inspired by TanStack Query. It provides a minimal and flexible API for managing server state, caching, and synchronizing data with your UI.
+
+## Key Features
+
+NGX Query offers several powerful features to enhance your data management:
+
+- **Native Angular Integration**: Built specifically for Angular, it's observable-based and leverages Angular's dependency injection system and SSR friendly.
+- **Fluent API**: Define queries and mutations with a builder pattern for clear and declarative usage.
+- **Caching & Invalidation**: Automatic caching with configurable stale times, garbage collection, and fine-grained invalidation.
+- **Reactive by Design**: Results are streams (`Observable`) that integrate seamlessly with Angular templates and RxJS operators.
+- **Optimistic Updates**: Instantly reflect UI changes while mutations are in-flight, with rollback on failure.
+- **Error & Retry Strategies**: Built-in retry policies and error handling out of the box.
+- **Focus & Reconnect Awareness**: Automatic refetching when the app window regains focus or reconnects to the network.
+- **SSR & TransferState Support**: Compatible with Angular Universal for fast server-side rendering and hydration.
+- **Signal Interop**: Simple utilities to bridge Observables with Angular’s Signals for zoneless rendering.
+
+## When to Use
+
+Use **NGX Query** if your application needs:
+
+- Reliable synchronization of server state with UI.
+- Data deduplication and caching across components.
+- Configurable refetching strategies (interval, focus, reconnect).
+- Declarative queries and mutations with strong typing.
+- A professional-grade alternative to ad-hoc `HttpClient` calls.
+
+## Comparison with TanStack Query
+
+NGX Query is inspired by **TanStack Query**, but designed for Angular:
+
+- **Observables-first** instead of Promises for native Angular integration.
+- **Dependency Injection** instead of React/Vanilla context providers.
+- **Fluent Builder API** to define queries/mutations in a clear and composable way.
+- **SSR & TransferState** integration out of the box for Angular Universal.
+- No external runtime dependencies beyond Angular and RxJS.

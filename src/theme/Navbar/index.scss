@@ -1,0 +1,43 @@
+.navbar {
+  &__inner {
+    position: sticky;
+    top: 0;
+    background-color: var(--nav-bg-color);
+    z-index: 10;
+    padding: 10px;
+  }
+  &__logo {
+    min-height: 40px;
+  }
+
+  &__item {
+    font-weight: 600;
+  }
+  .buttons {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+
+    a {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background-color: transparent;
+      transition: background-color 0.2s ease;
+
+      &:hover {
+        background-color: var(--ifm-color-emphasis-200);
+      }
+
+      svg {
+        fill: currentColor;
+        width: 24px;
+        height: 24px;
+        opacity: 0.8;
+      }
+    }
+  }
+}

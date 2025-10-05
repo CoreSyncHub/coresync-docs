@@ -1,0 +1,237 @@
+---
+sidebar_position: 2
+sidebar_label: Quick Start
+description: 'Follow this quick start guide to set up NGX Query in your Angular application and start managing server state efficiently.'
+toc_max_heading_level: 5
+---
+
+# Quick Start
+
+This guide shows the minimum to get productive with **NGX Query**.
+
+## 1. Configure the QueryClient
+
+```ts
+// app.config.ts
+import { ApplicationConfig } from '@angular/core';
+import { provideHttpClient, withFetch } from '@angular/common/http';
+import { provideQueryClient } from '@coresync/ngx-query';
+
+export const appConfig: ApplicationConfig = {
+  providers: [
+    provideHttpClient(withFetch()),
+    provideQueryClient({
+      staleTime: 60_000, // data considered fresh for 1 min
+      gcTime: 10 * 60_000, // garbage collect inactive data after 10 min
+      retry: 3, // retry failed fetches up to 3 times
+      refetchOnFocus: true,
+      refetchOnReconnect: true,
+    }),
+  ],
+};
+```
+
+## 2. Your First Query
+
+```ts title="user-list.component.ts"
+import { Component, inject, signal } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { HttpClient } from '@angular/common/http';
+import { queryBuilder, injectQueryClient } from '@coresync/ngx-query';
+
+interface UserDto {
+  id: string;
+  name: string;
+  email: string;
+}
+
+@Component({
+  standalone: true,
+  selector: 'user-list',
+  imports: [CommonModule],
+  template: `
+    <section>
+      <h2>Users</h2>
+
+      @if (status$ | async; as status) {
+        @if (status === 'loading') {
+          <p>Loading…</p>
+        } @else if (status === 'error') {
+          <p>Error while loading users.</p>
+        }
+      }
+
+      @if (users$ | async; as users) {
+        @for (user of users; track user.id) {
+          <li>{{ user.name }} · {{ user.email }}</li>
+        }
+      }
+
+      <button (click)="refetch()">Refetch</button>
+    </section>
+  `,
+})
+export class UserListComponent {
+  private readonly httpClient = inject(HttpClient);
+  private readonly queryClient = injectQueryClient();
+
+  private readonly usersQuery = queryBuilder<UserDto[]>(this.queryClient)
+    .key(['users'])
+    .fetcher(() => this.httpClient.get<UserDto[]>('/api/users'))
+    .select((users) => users.slice().sort((a, b) => a.name.localeCompare(b.name)))
+    .build();
+
+  protected users$ = this.usersQuery.data$;
+  protected status$ = this.usersQuery.status$;
+
+  protected refetch() {
+    this.usersQuery.refetch();
+  }
+}
+```
+
+## 3. Your First Mutation & Invalidation
+
+```ts title="create-user.component.ts"
+import { Component, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { HttpClient } from '@angular/common/http';
+import { mutationBuilder, injectQueryClient } from '@coresync/ngx-query';
+import { FormGroup, FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
+
+interface CreateUserInput {
+  name: string;
+  email: string;
+}
+
+interface UserDto {
+  id: string;
+  name: string;
+  email: string;
+}
+
+@Component({
+  standalone: true,
+  selector: 'create-user',
+  imports: [ReactiveFormsModule, CommonModule],
+  template: `
+    <section>
+      <h2>Create User</h2>
+
+      <form [formGroup]="userForm" (ngSubmit)="onSubmit(userForm)">
+        <label>
+          Name:
+          <input formControlName="name" />
+        </label>
+        <label>
+          Email:
+          <input formControlName="email" />
+        </label>
+        <button type="submit" [disabled]="userForm.invalid">Create User</button>
+      </form>
+
+      @if (status$ | async; as status) {
+        @if (status === 'loading') {
+          <p>Saving…</p>
+        } @else if (status === 'error') {
+          <p>Error while saving.</p>
+        }
+      }
+    </section>
+  `,
+})
+export class CreateUserComponent {
+  private readonly httpClient = inject(HttpClient);
+  private readonly queryClient = injectQueryClient();
+
+  userForm = new FormGroup({
+    name: new FormControl('', { nonNullable: true }),
+    email: new FormControl('', { nonNullable: true, validators: [Validators.email] }),
+  });
+
+  private readonly createUser = mutationBuilder<UserDto, CreateUserInput>(this.queryClient)
+    .key(['users', 'create'])
+    .affects(['users']) // invalidate 'users' queries on success
+    .mutateFn((input) => this.httpClient.post<UserDto>('/api/users', input))
+    .build();
+
+  status$ = this.createUser.status$;
+  data$ = this.createUser.data$;
+  error$ = this.createUser.error$;
+  isMutating$ = this.createUser.isMutating$;
+
+  onSubmit(form: FormGroup) {
+    if (form.valid) {
+      this.createUser.mutate$({ name: form.value.name, email: form.value.email }).subscribe();
+    }
+  }
+}
+```
+
+## 4. Dependent queries and toggling with `enabledWhen`
+
+```ts title="user-details.component.ts"
+import { Component, inject, signal, computed } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { injectQueryClient, queryBuilder } from '@coresync/ngx-query';
+import { CommonModule } from '@angular/common';
+
+@Component({
+  standalone: true,
+  selector: 'user-details',
+  imports: [CommonModule],
+  template: `
+    <input [value]="userId()" (input)="onUserIdInput($event)" />
+    @if (details$ | async; as details) {
+      <pre>{{ details | json }}</pre>
+    }
+  `,
+})
+export class UserDetailsComponent {
+  private httpClient = inject(HttpClient);
+  private queryClient = injectQueryClient();
+
+  userId = signal<string>('');
+  key = computed(() => ['user', this.userId()]);
+  enabled = computed(() => !!this.userId());
+
+  details$ = queryBuilder<any>(this.queryClient)
+    .key(this.key)
+    .enabledWhen(this.enabled)
+    .fetcher(() => this.httpClient.get(`/api/users/${this.userId()}`))
+    .build().data$;
+
+  onUserIdInput(event: Event) {
+    const value = (event.target as HTMLInputElement).value;
+    this.userId.set(value);
+  }
+}
+```
+
+## 5. Polling & Backoff
+
+```ts
+queryBuilder<Stats>()
+  .key(['stats'])
+  .fetcher(() => this.httpClient.get<Stats>('/api/stats'))
+  .pollEvery(15_000) // poll every 15s while observed
+  .retryWith({ baseDelayMs: 500, maxAttempts: 5, strategy: 'exponential' })
+  .build();
+```
+
+## 6. Common Patterns
+
+- **Set seed data**:
+  ```ts
+  queryClient.setQueryData(['users'], initialUsers);
+  ```
+- **Access current cache snapshot**:
+  ```ts
+  const users = queryClient.getQueryData<UserDto[]>(['users']);
+  ```
+
+## 7. Requirements
+
+- Angular 20+
+- RxJS 7+
+- Works zoneless. No Promises.
