@@ -66,9 +66,9 @@ export default function NavbarContent(): ReactNode {
             <a href="https://github.com/CoreSyncHub" target="_blank" rel="noopener noreferrer">
               <GithubIcon />
             </a>
-            <a href="https://discord.gg/coresync" target="_blank" rel="noopener noreferrer">
+            { /** <a href="https://discord.gg/coresync" target="_blank" rel="noopener noreferrer">
               <DiscordIcon />
-            </a>
+            </a> */ }
             <NavbarColorModeToggle />
           </div>
         </>
